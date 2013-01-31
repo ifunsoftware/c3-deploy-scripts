@@ -1,0 +1,23 @@
+set :gateway, "routeradmin@plabrouter.ifunsoftware.com:212"
+role :c3backend, "aphreet@192.168.1.109"
+
+task :stop_virgo do
+  run "/opt/local/virgo/bin/shutdown.sh"
+end
+
+task :start_virgo do
+  run "nohup /opt/local/virgo/bin/startup.sh > /dev/null 2>&1 </dev/null &"
+end
+
+task :upload_c3 do
+  run "rm -rf /opt/local/tmp"
+  run "mkdir -p /opt/local/tmp"
+  run "cd /opt/local/tmp && wget -q http://build.ifunsoftware.com/guestAuth/repository/download/bt4/.lastSuccessful/c3-all-1.3.4.SNAPSHOT.zip"
+  run "cd /opt/local/tmp && unzip *.zip"
+end
+
+task :deploy_c3 do
+  run "rm -f /opt/local/virgo/repository/usr/*"
+  run "cp /opt/local/tmp/server/lib/* /opt/local/virgo/repository/usr"
+  run "cp /opt/local/tmp/server/pickup/* /opt/local/virgo/pickup"
+end
