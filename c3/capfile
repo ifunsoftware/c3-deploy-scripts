@@ -15,10 +15,10 @@ namespace :c3 do
   		run "nohup #{virgo_root}/bin/startup.sh > /dev/null 2>&1 </dev/null &"
 	end
 
-	task :cleanup
+	task :cleanup do
 		run "rm -rf #{c3_tmp_dir}"
   		run "mkdir -p #{c3_tmp_dir}"
-	do
+	end
 
 	task :put_platform do
   		run "cd #{c3_tmp_dir} && wget -q http://build.ifunsoftware.com/guestAuth/repository/download/bt4/.lastSuccessful/c3-all-#{c3_version}.zip"
@@ -42,7 +42,7 @@ namespace :c3 do
 	end
 
 	desc "Updates c3 platform and c3 web to the latest versions from build server"
-	task :update_all :roles => :backend do
+	task :update_all, :roles => :backend do
 		stop
 		cleanup
 		put_platform
@@ -53,7 +53,7 @@ namespace :c3 do
 	end
 
 	desc "Updates c3 platform to the latest version from the build server"
-	task :update_platform :roles => :backend do
+	task :update_platform, :roles => :backend do
 		stop
 		cleanup
 		put_platform
@@ -62,7 +62,7 @@ namespace :c3 do
 	end
 
 	desc "Updates c3 web to the latest version from the build server"
-	task :update_platform :roles => :backend do
+	task :update_web, :roles => :backend do
 		stop
 		cleanup
 		put_web
