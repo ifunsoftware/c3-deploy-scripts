@@ -69,4 +69,15 @@ namespace :c3 do
 		deploy_web
 		start
 	end
+
+	desc "Gathers logs from c3 nodes"
+	task :download_logs, :roles => :backend do
+		download("#{virgo_root}/serviceability/logs/", "downloads/log-$CAPISTRANO:HOST$", :recursive => true)
+	end
+
+	desc "Gathers c3 configuration from nodes"
+	task :download_configs, :roles => :backend do
+		download("/home/aphreet/.c3/", "downloads/config-$CAPISTRANO:HOST$", :recursive => true)
+	end
+
 end
