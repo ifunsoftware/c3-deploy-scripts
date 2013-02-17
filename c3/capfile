@@ -9,6 +9,8 @@ namespace :c3 do
 
 	task :stop do
   		run "#{virgo_root}/bin/shutdown.sh"
+  		#in 5 seconds test if virgo is still alive and if it is - kill it with fire!
+  		run "sleep 5 && #{virgo_root}/bin/force_shutdown.sh"
 	end
 
 	task :start do
@@ -80,6 +82,8 @@ namespace :c3 do
 
 	task :full_cleanup, :roles => :backend do
 		stop
+		run "rm -f #{virgo_root}/repository/usr/*"
+		run "rm -f #{virgo_root}/pickup/*"
 		run "rm -rf #{virgo_root}/work"
 		run "rm -rf #{virgo_root}/serviceability"
 	end
