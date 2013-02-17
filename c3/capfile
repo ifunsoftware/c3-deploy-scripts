@@ -32,8 +32,6 @@ namespace :c3 do
 	end
 
 	task :put_web do
-		run "rm -rf #{c3_tmp_dir}"
-  		run "mkdir -p #{c3_tmp_dir}"
   		run "cd #{c3_tmp_dir} && wget -q http://build.ifunsoftware.com/guestAuth/repository/download/bt7/.lastSuccessful/#{c3_web_war}"
 	end
 
@@ -78,6 +76,12 @@ namespace :c3 do
 	desc "Gathers c3 configuration from nodes"
 	task :download_configs, :roles => :backend do
 		download("/home/aphreet/.c3/", "downloads/config-$CAPISTRANO:HOST$", :recursive => true)
+	end
+
+	task :full_cleanup, :roles => :backend do
+		stop
+		run "rm -rf #{virgo_root}/work"
+		run "rm -rf #{virgo_root}/serviceability"
 	end
 
 end
