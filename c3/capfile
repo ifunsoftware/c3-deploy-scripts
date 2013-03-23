@@ -4,7 +4,7 @@ set :gateway, "routeradmin@plabrouter.ifunsoftware.com:212"
 namespace :c3 do	
 	set :virgo_root, "/opt/local/virgo" 
 	set :c3_tmp_dir, "/opt/local/tmp"
-	set :c3_version, "1.3.8.SNAPSHOT"
+	set :c3_version, "1.3.8-SNAPSHOT"
 	set :c3_web_war, "c3webclient-1.0.0.war"
 
 	task :stop do
