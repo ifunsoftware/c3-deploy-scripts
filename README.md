@@ -10,4 +10,5 @@ Get all supported tasks:
 
 ```
 #> cd c3/
-#> cap -T```
+#> cap -T
+```
