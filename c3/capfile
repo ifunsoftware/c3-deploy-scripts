@@ -1,78 +1,93 @@
-role :backend, "aphreet@192.168.1.109", "aphreet@192.168.1.112"
-set :gateway, "routeradmin@plabrouter.ifunsoftware.com:212"
+require "capistrano/setup"
+require "capistrano/deploy"
+
+
+set :stage, :production
+
+server "node0.c3.ifunsoftware.com", user: "aphreet", roles: %w{backend}
+server "node1.c3.ifunsoftware.com", user: "aphreet", roles: %w{backend}
+
 
 namespace :c3 do	
 	set :virgo_root, "/opt/local/virgo" 
 	set :c3_tmp_dir, "/opt/local/tmp"
 
 	task :stop do
-  		run "#{virgo_root}/bin/shutdown.sh"
+  		run "#{fetch(:virgo_root)}/bin/shutdown.sh"
   		#in 5 seconds test if virgo is still alive and if it is - kill it with fire!
-  		run "sleep 5 && #{virgo_root}/bin/force_shutdown.sh"
+  		run "sleep 5 && #{fetch(:virgo_root)}/bin/force_shutdown.sh"
 	end
 
 	task :start do
-  		run "nohup #{virgo_root}/bin/startup.sh > /dev/null 2>&1 </dev/null &"
+  		run "nohup #{fetch(:virgo_root)}/bin/startup.sh > /dev/null 2>&1 </dev/null &"
 	end
 
 	task :cleanup do
-		run "rm -rf #{c3_tmp_dir}"
-  		run "mkdir -p #{c3_tmp_dir}"
+		run "rm -rf #{fetch(:c3_tmp_dir)}"
+  		run "mkdir -p #{fetch(:c3_tmp_dir)}"
 	end
 
 	task :put_platform do
 
-		run	"cd #{c3_tmp_dir} && wget -q 'http://repository.ifunsoftware.com/service/local/artifact/maven/redirect?r=snapshots&g=org.aphreet.c3&a=c3-deploy&v=LATEST' --content-disposition"
+		run	"cd #{fetch(:c3_tmp_dir)} && wget -q 'http://repository.ifunsoftware.com/service/local/artifact/maven/redirect?r=snapshots&g=org.aphreet.c3&a=c3-deploy&v=LATEST' --content-disposition"
 
-		run "mv #{c3_tmp_dir}/c3-deploy*.jar #{c3_tmp_dir}/c3-deploy.zip"
+		run "mv #{fetch(:c3_tmp_dir)}/c3-deploy*.jar #{fetch(:c3_tmp_dir)}/c3-deploy.zip"
 
-  		run "cd #{c3_tmp_dir} && unzip *.zip"
+  		run "cd #{fetch(:c3_tmp_dir)} && unzip *.zip"
 	end
 
 	task :deploy_platform do
-		run "rm -f #{virgo_root}/pickup/c3*.plan"
-  		run "rm -f #{virgo_root}/repository/usr/*"
-  		run "cp #{c3_tmp_dir}/server/lib/* #{virgo_root}/repository/usr"
-  		run "cp #{c3_tmp_dir}/server/pickup/c3-all.plan #{virgo_root}/pickup"
+		run "rm -f #{fetch(:virgo_root)}/pickup/c3*.plan"
+  		run "rm -f #{fetch(:virgo_root)}/repository/usr/*"
+  		run "cp #{fetch(:c3_tmp_dir)}/server/lib/* #{fetch(:virgo_root)}/repository/usr"
+  		run "cp #{fetch(:c3_tmp_dir)}/server/pickup/c3-all.plan #{fetch(:virgo_root)}/pickup"
 	end
 
 	task :put_web do
-  		run "cd #{c3_tmp_dir} && wget -q 'http://repository.ifunsoftware.com/service/local/artifact/maven/redirect?r=snapshots&g=org.aphreet.c3&a=c3webclient&p=war&v=LATEST' --content-disposition"
+  		run "cd #{fetch(:c3_tmp_dir)} && wget -q 'http://repository.ifunsoftware.com/service/local/artifact/maven/redirect?r=snapshots&g=org.aphreet.c3&a=c3webclient&p=war&v=LATEST' --content-disposition"
 	end
 
 	task :deploy_web do
-		run "rm -f #{virgo_root}/pickup/c3webclient*.war"
-		run "rm -f #{virgo_root}/repository/usr/c3webclient*.war"
-		run "cp #{c3_tmp_dir}/c3webclient*.war #{virgo_root}/repository/usr"
+		run "rm -f #{fetch(:virgo_root)}/pickup/c3webclient*.war"
+		run "rm -f #{fetch(:virgo_root)}/repository/usr/c3webclient*.war"
+		run "cp #{fetch(:c3_tmp_dir)}/c3webclient*.war #{fetch(:virgo_root)}/repository/usr"
 	end
 
 	desc "Updates c3 platform and c3 web to the latest versions from build server"
-	task :update_all, :roles => :backend do
-		cleanup
-		put_platform
-		put_web
-		stop
-		deploy_platform
-		deploy_web
-		start
+	task :update_all do
+		on roles(:backend), in: :sequence do
+			cleanup
+			put_platform
+			put_web
+			stop
+			deploy_platform
+			deploy_web
+			start
+		end
 	end
 
 	desc "Gathers logs from c3 nodes"
-	task :download_logs, :roles => :backend do
-		download("#{virgo_root}/serviceability/logs/", "downloads/log-$CAPISTRANO:HOST$", :recursive => true)
+	task :download_logs do
+		on roles(:backend) do |host|
+			download!("#{fetch(:virgo_root)}/serviceability/logs/", "downloads/log-#{host}", :recursive => true)
+		end
 	end
 
 	desc "Gathers c3 configuration from nodes"
-	task :download_configs, :roles => :backend do
-		download("/home/aphreet/.c3/", "downloads/config-$CAPISTRANO:HOST$", :recursive => true)
+	task :download_configs do
+		on roles(:backend) do |host|
+			download!("/home/aphreet/.c3/", "downloads/config-#{host}", :recursive => true)
+		end
 	end
 
-	task :full_cleanup, :roles => :backend do
-		stop
-		run "rm -f #{virgo_root}/repository/usr/*"
-		run "rm -f #{virgo_root}/pickup/*"
-		run "rm -rf #{virgo_root}/work"
-		run "rm -rf #{virgo_root}/serviceability"
+	task :full_cleanup do
+		on roles(:backend), in: :sequence do
+			stop
+			run "rm -f #{fetch(:virgo_root)}/repository/usr/*"
+			run "rm -f #{fetch(:virgo_root)}/pickup/*"
+			run "rm -rf #{fetch(:virgo_root)}/work"
+			run "rm -rf #{fetch(:virgo_root)}/serviceability"
+		end
 	end
 
 end
