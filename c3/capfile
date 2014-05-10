@@ -13,56 +13,69 @@ namespace :c3 do
 	set :c3_tmp_dir, "/opt/local/tmp"
 
 	task :stop do
-  		run "#{fetch(:virgo_root)}/bin/shutdown.sh"
-  		#in 5 seconds test if virgo is still alive and if it is - kill it with fire!
-  		run "sleep 5 && #{fetch(:virgo_root)}/bin/force_shutdown.sh"
+		on roles(:backend) do |host|
+  			execute("#{fetch(:virgo_root)}/bin/shutdown.sh")
+  			#in 5 seconds test if virgo is still alive and if it is - kill it with fire!
+  			execute("sleep 5 && #{fetch(:virgo_root)}/bin/force_shutdown.sh")
+  		end
 	end
 
 	task :start do
-  		run "nohup #{fetch(:virgo_root)}/bin/startup.sh > /dev/null 2>&1 </dev/null &"
+		on roles(:backend) do |host|
+  			execute("nohup #{fetch(:virgo_root)}/bin/startup.sh > /dev/null 2>&1 </dev/null &")
+		end
 	end
 
 	task :cleanup do
-		run "rm -rf #{fetch(:c3_tmp_dir)}"
-  		run "mkdir -p #{fetch(:c3_tmp_dir)}"
+		on roles(:backend) do |host|
+			execute("rm -rf #{fetch(:c3_tmp_dir)}")
+  			execute("mkdir -p #{fetch(:c3_tmp_dir)}")
+		end
 	end
 
 	task :put_platform do
+		on roles(:backend) do |host|
+			execute("cd #{fetch(:c3_tmp_dir)} && wget -q 'http://repository.ifunsoftware.com/service/local/artifact/maven/redirect?r=snapshots&g=org.aphreet.c3&a=c3-deploy&v=LATEST' --content-disposition")
 
-		run	"cd #{fetch(:c3_tmp_dir)} && wget -q 'http://repository.ifunsoftware.com/service/local/artifact/maven/redirect?r=snapshots&g=org.aphreet.c3&a=c3-deploy&v=LATEST' --content-disposition"
+			execute("mv #{fetch(:c3_tmp_dir)}/c3-deploy*.jar #{fetch(:c3_tmp_dir)}/c3-deploy.zip")
 
-		run "mv #{fetch(:c3_tmp_dir)}/c3-deploy*.jar #{fetch(:c3_tmp_dir)}/c3-deploy.zip"
-
-  		run "cd #{fetch(:c3_tmp_dir)} && unzip *.zip"
+  			execute("cd #{fetch(:c3_tmp_dir)} && unzip *.zip")
+		end
 	end
 
 	task :deploy_platform do
-		run "rm -f #{fetch(:virgo_root)}/pickup/c3*.plan"
-  		run "rm -f #{fetch(:virgo_root)}/repository/usr/*"
-  		run "cp #{fetch(:c3_tmp_dir)}/server/lib/* #{fetch(:virgo_root)}/repository/usr"
-  		run "cp #{fetch(:c3_tmp_dir)}/server/pickup/c3-all.plan #{fetch(:virgo_root)}/pickup"
+		on roles(:backend) do |host|
+			execute("rm -f #{fetch(:virgo_root)}/pickup/c3*.plan")
+  			execute("rm -f #{fetch(:virgo_root)}/repository/usr/*")
+  			execute("cp #{fetch(:c3_tmp_dir)}/server/lib/* #{fetch(:virgo_root)}/repository/usr")
+  			execute("cp #{fetch(:c3_tmp_dir)}/server/pickup/c3-all.plan #{fetch(:virgo_root)}/pickup")
+		end
 	end
 
 	task :put_web do
-  		run "cd #{fetch(:c3_tmp_dir)} && wget -q 'http://repository.ifunsoftware.com/service/local/artifact/maven/redirect?r=snapshots&g=org.aphreet.c3&a=c3webclient&p=war&v=LATEST' --content-disposition"
+  		on roles(:backend) do |host|
+  			execute("cd #{fetch(:c3_tmp_dir)} && wget -q 'http://repository.ifunsoftware.com/service/local/artifact/maven/redirect?r=snapshots&g=org.aphreet.c3&a=c3webclient&p=war&v=LATEST' --content-disposition")
+		end
 	end
 
 	task :deploy_web do
-		run "rm -f #{fetch(:virgo_root)}/pickup/c3webclient*.war"
-		run "rm -f #{fetch(:virgo_root)}/repository/usr/c3webclient*.war"
-		run "cp #{fetch(:c3_tmp_dir)}/c3webclient*.war #{fetch(:virgo_root)}/repository/usr"
+		on roles(:backend) do |host|
+			execute("rm -f #{fetch(:virgo_root)}/pickup/c3webclient*.war")
+			execute("rm -f #{fetch(:virgo_root)}/repository/usr/c3webclient*.war")
+			execute("cp #{fetch(:c3_tmp_dir)}/c3webclient*.war #{fetch(:virgo_root)}/repository/usr")
+		end
 	end
 
 	desc "Updates c3 platform and c3 web to the latest versions from build server"
 	task :update_all do
 		on roles(:backend), in: :sequence do
-			cleanup
-			put_platform
-			put_web
-			stop
-			deploy_platform
-			deploy_web
-			start
+			invoke 'c3:cleanup'
+			invoke 'c3:put_platform'
+			invoke 'c3:put_web'
+			invoke 'c3:stop'
+			invoke 'c3:deploy_platform'
+			invoke 'c3:deploy_web'
+			invoke 'c3:start'
 		end
 	end
 
@@ -82,11 +95,11 @@ namespace :c3 do
 
 	task :full_cleanup do
 		on roles(:backend), in: :sequence do
-			stop
-			run "rm -f #{fetch(:virgo_root)}/repository/usr/*"
-			run "rm -f #{fetch(:virgo_root)}/pickup/*"
-			run "rm -rf #{fetch(:virgo_root)}/work"
-			run "rm -rf #{fetch(:virgo_root)}/serviceability"
+			invoke 'c3:stop'
+			execute("rm -f #{fetch(:virgo_root)}/repository/usr/*")
+			execute("rm -f #{fetch(:virgo_root)}/pickup/*")
+			execute("rm -rf #{fetch(:virgo_root)}/work")
+			execute("rm -rf #{fetch(:virgo_root)}/serviceability")
 		end
 	end
 
