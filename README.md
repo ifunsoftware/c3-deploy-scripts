@@ -11,6 +11,7 @@ You also need to update your .ssh/config file to configure ssh proxy for node0 a
 ```
 Host plab
 HostName plabrouter.ifunsoftware.com
+User routeradmin
 Port 212
 
 Host node0.c3.ifunsoftware.com
